@@ -82,7 +82,13 @@
     result.textContent = "Opening camera...";
 
     try {
-      scanner = new Html5Qrcode("reader");
+      scanner = new Html5Qrcode("reader", {
+  formatsToSupport: [
+    Html5QrcodeSupportedFormats.EAN_13
+  ],
+  useBarCodeDetectorIfSupported: true,
+  verbose: false
+});
       await scanner.start(
         { facingMode: "environment" },
         {
