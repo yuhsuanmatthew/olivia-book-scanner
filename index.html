@@ -107,7 +107,11 @@ async function startScanner() {
     liveControls = await liveReader.decodeFromConstraints(
       {
         audio: false,
-        video: { facingMode: "environment" }
+        video: {
+  facingMode: { ideal: "environment" },
+  width: { ideal: 1920 },
+  height: { ideal: 1080 }
+}
       },
       video,
       async (scanResult, error, controls) => {
