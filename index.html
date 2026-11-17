@@ -102,7 +102,7 @@ async function startScanner() {
     video.style.width = "100%";
     reader.appendChild(video);
 
-    liveReader = new ZXingBrowser.BrowserMultiFormatReader();
+    liveReader = new ZXingBrowser.BrowserEANReader();
 
     liveControls = await liveReader.decodeFromConstraints(
       {
@@ -118,6 +118,7 @@ async function startScanner() {
         if (!scanResult || busy) return;
 
         const isbn = scanResult.getText();
+        result.textContent = "Barcode detected: " + isbn;
 
         if (!/^97[89]\d{10}$/.test(isbn)) return;
 
