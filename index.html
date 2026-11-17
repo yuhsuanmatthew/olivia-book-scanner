@@ -187,49 +187,109 @@
         (error?.message || String(error));
     }
   }
+
 async function scanBarcodePhoto(event) {
   const result = document.getElementById("result");
   const file = event.target.files[0];
-
   if (!file) return;
 
-  result.textContent = "Reading barcode from photo...";
+  result.textContent = "Analyzing barcode photo...";
 
   let scanner = null;
+  let imageUrl = null;
 
   try {
     if (typeof Html5Qrcode === "undefined") {
-      throw new Error("Barcode library did not load.");
+      throw new Error("Barcode scanner library did not load.");
     }
+
+    const image = await createImageBitmap(file);
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
 
     scanner = new Html5Qrcode("reader");
 
-   const isbn = await scanner.scanFile(file, false);
+    // Try the full image and several overlapping regions.
+    const regions = [
+      [0, 0, 1, 1],
+      [0, 0.35, 1, 0.65],
+      [0, 0.5, 1, 0.5],
+      [0.1, 0.2, 0.8, 0.7],
+      [0.15, 0.4, 0.7, 0.5],
+      [0, 0, 0.7, 1],
+      [0.3, 0, 0.7, 1]
+    ];
 
-    if (!/^97[89]\d{10}$/.test(isbn)) {
-      throw new Error("No valid ISBN-13 found.");
+    let isbn = null;
+
+    for (let i = 0; i < regions.length; i++) {
+      result.textContent =
+        "Scanning photo... attempt " +
+        (i + 1) + " of " + regions.length;
+
+      const [x, y, w, h] = regions[i];
+
+      const sx = Math.floor(x * image.width);
+      const sy = Math.floor(y * image.height);
+      const sw = Math.floor(w * image.width);
+      const sh = Math.floor(h * image.height);
+
+      const scale = Math.min(2, 1800 / sw);
+      canvas.width = Math.round(sw * scale);
+      canvas.height = Math.round(sh * scale);
+
+      ctx.fillStyle = "white";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(
+        image, sx, sy, sw, sh,
+        0, 0, canvas.width, canvas.height
+      );
+
+      const blob = await new Promise(resolve =>
+        canvas.toBlob(resolve, "image/png")
+      );
+
+      if (!blob) continue;
+
+      const croppedFile = new File(
+        [blob], "barcode.png", { type: "image/png" }
+      );
+
+      try {
+        const code = await scanner.scanFile(croppedFile, false);
+        if (/^97[89]\d{10}$/.test(code)) {
+          isbn = code;
+          break;
+        }
+      } catch (e) {
+        // Try the next image region.
+      }
+    }
+
+    image.close();
+
+    if (!isbn) {
+      throw new Error(
+        "Barcode not detected. Try a closer, sharper photo."
+      );
     }
 
     document.getElementById("isbn").value = isbn;
-
-    result.textContent = "ISBN found: " + isbn;
+    result.textContent = "ISBN detected: " + isbn;
 
     await findBook();
 
   } catch (error) {
     result.textContent =
-      "Could not read barcode. Try a clearer photo or enter ISBN manually. " +
-      (error.message || "");
-
+      "Could not read barcode: " + error.message;
   } finally {
     if (scanner) {
-      try {
-        scanner.clear();
-      } catch (e) {}
+      try { scanner.clear(); } catch (e) {}
     }
     event.target.value = "";
   }
 }
+
 </script>
 </body>
 </html>
