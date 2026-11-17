@@ -75,6 +75,7 @@
 </main>
 
 <script>
+  const AR_API_URL = "https://script.google.com/macros/s/AKfycby5xq8awAkmTB2qB3WUhHGGuc59lcxVweA59wZiP29pFMSL3NG3v-TQQ_QA7T4skIAL_Q/exec";
   let scanner = null;
   let busy = false;
 
@@ -199,9 +200,41 @@ async function stopScanner() {
         " | Pages: " + (book.number_of_pages || "Unknown");
       result.appendChild(details);
 
-      const note = document.createElement("p");
-      note.textContent = "Next: connect Olivia's AR quiz history.";
-      result.appendChild(note);
+     // Check Olivia's AR quiz history
+const arStatus = document.createElement("p");
+arStatus.textContent = "Checking Olivia's AR quiz history...";
+result.appendChild(arStatus);
+
+try {
+  const arUrl = AR_API_URL +
+    "?title=" + encodeURIComponent(book.title);
+
+  const arResponse = await fetch(arUrl);
+
+  if (!arResponse.ok) {
+    throw new Error("AR history service unavailable");
+  }
+
+  const arData = await arResponse.json();
+
+  if (arData.complete) {
+    const quiz = arData.quizzes?.[0];
+
+    arStatus.textContent =
+      "✅ Olivia has already taken this AR quiz!" +
+      (quiz?.score != null
+        ? " Score: " + quiz.score + "%"
+        : "");
+  } else {
+    arStatus.textContent =
+      "📖 No completed AR quiz found in Olivia's history.";
+  }
+
+} catch (error) {
+  arStatus.textContent =
+    "⚠️ Unable to check AR quiz history.";
+  console.error(error);
+}
     } catch (error) {
       result.textContent = "Lookup error: " +
         (error?.message || String(error));
