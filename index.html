@@ -220,11 +220,16 @@ try {
   if (Array.isArray(arData.quizzes) && arData.quizzes.length > 0) {
     const quiz = arData.quizzes?.[0];
 
-    arStatus.textContent =
-      "✅ Olivia has already taken this AR quiz!" +
-      (quiz?.score != null
-        ? " Score: " + quiz.score + "%"
-        : "");
+arStatus.textContent =
+  "✅ Olivia has already taken this AR quiz!" +
+  (quiz?.score != null
+    ? "\nScore: " + quiz.score + "%"
+    : "") +
+  (quiz?.arLevel != null
+    ? "\n📚 AR Book Level: " + quiz.arLevel.toFixed(1)
+    : "");
+
+arStatus.style.whiteSpace = "pre-line";
   } else {
     arStatus.textContent =
       "📖 No completed AR quiz found in Olivia's history.";
