@@ -103,7 +103,7 @@ async function startScanner() {
     video.style.width = "100%";
     reader.appendChild(video);
 
-    liveReader = new ZXingBrowser.BrowserEANReader();
+    liveReader = new ZXingBrowser.BrowserMultiFormatReader();
 
     liveControls = await liveReader.decodeFromConstraints(
       {
