@@ -78,64 +78,78 @@
   let scanner = null;
   let busy = false;
 
-  async function startScanner() {
-    const result = document.getElementById("result");
+  
+let liveReader = null;
+let liveControls = null;
 
-    if (typeof Html5Qrcode === "undefined") {
-      result.textContent = "Scanner library did not load.";
-      return;
+async function startScanner() {
+  const result = document.getElementById("result");
+  const reader = document.getElementById("reader");
+
+  try {
+    if (!window.ZXingBrowser) {
+      throw new Error("ZXing library did not load.");
     }
 
-    if (scanner) return;
+    if (liveControls) return;
 
     result.textContent = "Opening camera...";
+    reader.innerHTML = "";
 
-    try {
-      scanner = new Html5Qrcode("reader", {
-  formatsToSupport: [
-    Html5QrcodeSupportedFormats.EAN_13
-  ],
-  useBarCodeDetectorIfSupported: true,
-  verbose: false
-});
-      await scanner.start(
-        { facingMode: "environment" },
-        {
-          fps: 10,
-          qrbox: { width: 250, height: 150 },
-          formatsToSupport: [
-            Html5QrcodeSupportedFormats.EAN_13
-          ]
-        },
-        async (code) => {
-          if (busy || !/^97[89]\d{10}$/.test(code)) return;
-          busy = true;
-          document.getElementById("isbn").value = code;
-          await stopScanner();
-          await findBook();
-          busy = false;
-        },
-        () => {}
-      );
-      result.textContent = "Point camera at the ISBN barcode.";
-    } catch (error) {
-      result.textContent = "Camera error: " +
-        (error?.message || String(error));
-      await stopScanner();
-    }
+    const video = document.createElement("video");
+    video.setAttribute("playsinline", "true");
+    video.setAttribute("autoplay", "true");
+    video.style.width = "100%";
+    reader.appendChild(video);
+
+    liveReader = new ZXingBrowser.BrowserMultiFormatReader();
+
+    liveControls = await liveReader.decodeFromConstraints(
+      {
+        audio: false,
+        video: { facingMode: "environment" }
+      },
+      video,
+      async (scanResult, error, controls) => {
+        if (!scanResult || busy) return;
+
+        const isbn = scanResult.getText();
+
+        if (!/^97[89]\d{10}$/.test(isbn)) return;
+
+        busy = true;
+        controls.stop();
+        liveControls = null;
+
+        document.getElementById("isbn").value = isbn;
+        result.textContent = "ISBN detected: " + isbn;
+
+        await findBook();
+        busy = false;
+      }
+    );
+
+    result.textContent = "Point camera at the ISBN barcode.";
+
+  } catch (error) {
+    result.textContent = "Camera error: " + error.message;
+    await stopScanner();
+  }
+}
+
+
+  
+async function stopScanner() {
+  if (liveControls) {
+    liveControls.stop();
+    liveControls = null;
   }
 
-  async function stopScanner() {
-    if (!scanner) return;
-    const current = scanner;
-    scanner = null;
-    try {
-      if (current.isScanning) await current.stop();
-      current.clear();
-    } catch (error) {
-      console.warn(error);
-    }
-  }
+  liveReader = null;
+
+  const reader = document.getElementById("reader");
+  if (reader) reader.innerHTML = "";
+}
 
   async function findBook() {
     const isbn = document.getElementById("isbn")
