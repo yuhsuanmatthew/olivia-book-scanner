@@ -217,7 +217,7 @@ try {
 
   const arData = await arResponse.json();
 
-  if (arData.complete) {
+  if (Array.isArray(arData.quizzes) && arData.quizzes.length > 0) {
     const quiz = arData.quizzes?.[0];
 
     arStatus.textContent =
