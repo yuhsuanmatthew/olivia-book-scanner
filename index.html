@@ -1,0 +1,178 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Olivia's Book Scanner</title>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <style>
+    body {
+      font-family: -apple-system, Arial, sans-serif;
+      background: #f5f6fa;
+      color: #202538;
+      margin: 0;
+      padding: 24px 16px;
+    }
+    main {
+      max-width: 500px;
+      margin: auto;
+    }
+    .card {
+      background: white;
+      padding: 24px;
+      border-radius: 18px;
+      margin-top: 20px;
+    }
+    button {
+      background: #2563eb;
+      color: white;
+      border: 0;
+      padding: 14px 20px;
+      border-radius: 10px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    #reader { width: 100%; margin-top: 16px; }
+    #result { margin-top: 20px; overflow-wrap: anywhere; }
+    input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 12px;
+      font-size: 16px;
+      margin: 12px 0;
+    }
+  </style>
+</head>
+<body>
+<main>
+  <h1>📚 Olivia's Book Scanner</h1>
+  <p>Scan a book's ISBN barcode with your iPhone.</p>
+
+  <div class="card">
+    <h2>📷 Scan a Book</h2>
+    <button id="scanButton" onclick="startScanner()">
+      Start Camera
+    </button>
+    <div id="reader"></div>
+
+    <p>Or enter the ISBN manually:</p>
+    <input id="isbn" placeholder="9781338530124"
+           inputmode="numeric">
+    <button onclick="findBook()">Find Book</button>
+
+    <div id="result" role="status" aria-live="polite"></div>
+  </div>
+</main>
+
+<script>
+  let scanner = null;
+  let busy = false;
+
+  async function startScanner() {
+    const result = document.getElementById("result");
+
+    if (typeof Html5Qrcode === "undefined") {
+      result.textContent = "Scanner library did not load.";
+      return;
+    }
+
+    if (scanner) return;
+
+    result.textContent = "Opening camera...";
+
+    try {
+      scanner = new Html5Qrcode("reader");
+      await scanner.start(
+        { facingMode: "environment" },
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 150 },
+          formatsToSupport: [
+            Html5QrcodeSupportedFormats.EAN_13
+          ]
+        },
+        async (code) => {
+          if (busy || !/^97[89]\d{10}$/.test(code)) return;
+          busy = true;
+          document.getElementById("isbn").value = code;
+          await stopScanner();
+          await findBook();
+          busy = false;
+        },
+        () => {}
+      );
+      result.textContent = "Point camera at the ISBN barcode.";
+    } catch (error) {
+      result.textContent = "Camera error: " +
+        (error?.message || String(error));
+      await stopScanner();
+    }
+  }
+
+  async function stopScanner() {
+    if (!scanner) return;
+    const current = scanner;
+    scanner = null;
+    try {
+      if (current.isScanning) await current.stop();
+      current.clear();
+    } catch (error) {
+      console.warn(error);
+    }
+  }
+
+  async function findBook() {
+    const isbn = document.getElementById("isbn")
+      .value.replace(/[^0-9]/g, "");
+    const result = document.getElementById("result");
+
+    if (!/^97[89]\d{10}$/.test(isbn)) {
+      result.textContent = "Please enter a valid 13-digit ISBN.";
+      return;
+    }
+
+    result.textContent = "Looking up book...";
+
+    try {
+      const url = "https://openlibrary.org/api/books?bibkeys=ISBN:" +
+        encodeURIComponent(isbn) +
+        "&format=json&jscmd=data";
+
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("Book service unavailable");
+
+      const data = await response.json();
+      const book = data["ISBN:" + isbn];
+
+      if (!book) {
+        result.textContent = "Book not found in Open Library.";
+        return;
+      }
+
+      result.textContent = "";
+
+      const heading = document.createElement("h3");
+      heading.textContent = book.title || "Unknown title";
+      result.appendChild(heading);
+
+      const authors = (book.authors || [])
+        .map(a => a.name).join(", ");
+
+      const details = document.createElement("p");
+      details.textContent = "Author: " + authors +
+        " | ISBN: " + isbn +
+        " | Pages: " + (book.number_of_pages || "Unknown");
+      result.appendChild(details);
+
+      const note = document.createElement("p");
+      note.textContent = "Next: connect Olivia's AR quiz history.";
+      result.appendChild(note);
+    } catch (error) {
+      result.textContent = "Lookup error: " +
+        (error?.message || String(error));
+    }
+  }
+</script>
+</body>
+</html>
