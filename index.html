@@ -55,6 +55,15 @@
       Start Camera
     </button>
     <div id="reader"></div>
+    <p>Or take a photo of the barcode:</p>
+
+<input
+  type="file"
+  id="barcodePhoto"
+  accept="image/*"
+  capture="environment"
+  onchange="scanBarcodePhoto(event)"
+>
 
     <p>Or enter the ISBN manually:</p>
     <input id="isbn" placeholder="9781338530124"
@@ -179,6 +188,49 @@
         (error?.message || String(error));
     }
   }
+async function scanBarcodePhoto(event) {
+  const result = document.getElementById("result");
+  const file = event.target.files[0];
+
+  if (!file) return;
+
+  result.textContent = "Reading barcode from photo...";
+
+  let scanner = null;
+
+  try {
+    if (typeof Html5Qrcode === "undefined") {
+      throw new Error("Barcode library did not load.");
+    }
+
+    scanner = new Html5Qrcode("reader");
+
+    const isbn = await scanner.scanFile(file, false);
+
+    if (!/^97[89]\d{10}$/.test(isbn)) {
+      throw new Error("No valid ISBN-13 found.");
+    }
+
+    document.getElementById("isbn").value = isbn;
+
+    result.textContent = "ISBN found: " + isbn;
+
+    await findBook();
+
+  } catch (error) {
+    result.textContent =
+      "Could not read barcode. Try a clearer photo or enter ISBN manually. " +
+      (error.message || "");
+
+  } finally {
+    if (scanner) {
+      try {
+        scanner.clear();
+      } catch (e) {}
+    }
+    event.target.value = "";
+  }
+}
 </script>
 </body>
 </html>
