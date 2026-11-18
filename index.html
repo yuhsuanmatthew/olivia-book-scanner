@@ -199,6 +199,22 @@ async function stopScanner() {
         " | ISBN: " + isbn +
         " | Pages: " + (book.number_of_pages || "Unknown");
       result.appendChild(details);
+      
+const arLink = document.createElement("a");
+
+arLink.href = "https://www.arbookfind.com/";
+arLink.target = "_blank";
+arLink.rel = "noopener noreferrer";
+arLink.textContent = "🔎 Find AR Book Level on AR BookFinder";
+
+arLink.style.display = "inline-block";
+arLink.style.marginTop = "12px";
+arLink.style.marginBottom = "12px";
+arLink.style.color = "#2563eb";
+arLink.style.fontWeight = "bold";
+
+result.appendChild(arLink);
+
 
      // Check Olivia's AR quiz history
 const arStatus = document.createElement("p");
