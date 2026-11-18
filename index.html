@@ -261,10 +261,14 @@ arStatus.style.whiteSpace = "pre-line";
 
     const levelData = await levelResponse.json();
 
-    if (levelData.found && levelData.arLevel != null) {
-      arStatus.textContent =
-        "📚 AR Book Level: " + levelData.arLevel +
-        "\n📖 No completed AR quiz found in Olivia's history.";
+    
+if (levelData.found && levelData.arLevel != null) {
+  arStatus.textContent =
+    "📚 AR Book Level: " + levelData.arLevel +
+    "\n🔢 AR Quiz Number: " + (levelData.arQuizNumber || "N/A") +
+    "\n⭐ AR Points: " + (levelData.arPoints ?? "N/A") +
+    "\n📖 No completed AR quiz found in Olivia's history.";
+
     } else {
       arStatus.textContent =
         "📖 No completed AR quiz found in Olivia's history." +
