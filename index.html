@@ -247,8 +247,40 @@ arStatus.textContent =
 
 arStatus.style.whiteSpace = "pre-line";
   } else {
+    
+  // Look up AR level for books without completed quizzes
+  try {
+    const levelUrl = AR_API_URL +
+      "?isbn=" + encodeURIComponent(isbn);
+
+    const levelResponse = await fetch(levelUrl);
+
+    if (!levelResponse.ok) {
+      throw new Error("AR level lookup failed");
+    }
+
+    const levelData = await levelResponse.json();
+
+    if (levelData.found && levelData.arLevel != null) {
+      arStatus.textContent =
+        "📚 AR Book Level: " + levelData.arLevel +
+        "\n📖 No completed AR quiz found in Olivia's history.";
+    } else {
+      arStatus.textContent =
+        "📖 No completed AR quiz found in Olivia's history." +
+        "\n🔎 AR level not in database.";
+    }
+
+    arStatus.style.whiteSpace = "pre-line";
+
+  } catch (error) {
     arStatus.textContent =
-      "📖 No completed AR quiz found in Olivia's history.";
+      "📖 No completed AR quiz found in Olivia's history." +
+      "\n⚠️ Unable to retrieve AR level.";
+    console.error(error);
+  }
+
+
   }
 
 } catch (error) {
